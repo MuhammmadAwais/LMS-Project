@@ -63,7 +63,7 @@ export default function Navbar() {
         <button id="theme-toggle" class="btn btn-outline" style="width: 100%; color: var(--text-on-dark); border-color: rgba(255,255,255,0.2);">
           <i class='bx bx-moon'></i> <span>Toggle Theme</span>
         </button>
-        <button id="logout-btn" class="btn btn-danger" style="width: 100%;">
+        <button onclick="window.handleLogout()" class="btn btn-danger" style="width: 100%;">
           <i class='bx bx-log-out-circle'></i> <span>Log Out</span>
         </button>
       </div>
