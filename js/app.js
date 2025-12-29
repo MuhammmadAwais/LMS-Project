@@ -3,17 +3,27 @@ import Router from "./core/Router.js";
 import Auth from "./core/Auth.js";
 import Navbar from "./components/Navbar.js";
 
+// Pages
 import Login from "./pages/Login.js";
 import Dashboard from "./pages/Dashboard.js";
 import Books from "./pages/Books.js";
+import BookDetail from "./pages/BookDetail.js";
 import IssueReturn from "./pages/IssueReturn.js";
 import Users from "./pages/Users.js";
 import StudentInventory from "./pages/StudentInventory.js";
+import Settings from "./pages/Settings.js";
+import Complaints from "./pages/Complaints.js";
 
 Store.init();
 
-// --- LAYOUT ---
 const app = document.getElementById("app");
+
+// Theme Applicator
+const applyTheme = () => {
+  const theme = Store.getState().theme;
+  if (theme === "dark") document.body.classList.add("dark");
+  else document.body.classList.remove("dark");
+};
 
 const renderLayout = () => {
   if (window.location.hash === "#login" || window.location.hash === "") {
@@ -26,51 +36,103 @@ const renderLayout = () => {
             </div>
         `;
   }
+  applyTheme();
 };
 
 const routes = {
   login: Login,
   dashboard: Dashboard,
   books: Books,
+  "book-detail": BookDetail,
   issue: IssueReturn,
   users: Users,
   mybooks: StudentInventory,
+  settings: Settings,
+  complaints: Complaints,
 };
 
 window.addEventListener("hashchange", renderLayout);
 renderLayout();
 const router = new Router(routes);
 
-// --- GLOBAL LOGIC ---
+// --- GLOBAL EVENT LISTENERS ---
 
-// 1. FILTERS & SEARCH
-window.handleCategory = (val) => {
-  window.currentCategory = val;
-  router.handleRoute();
+// 1. Navigation & View Book
+window.viewBook = (id) => {
+  window.currentBookId = id;
+  window.location.hash = "book-detail";
 };
-document.body.addEventListener("input", (e) => {
-  if (e.target.id === "searchInput") {
-    window.currentSearchTerm = e.target.value;
+
+// 2. Issue Logic (With Date Picker)
+window.initIssue = (bookId) => {
+  const settings = Store.getSettings();
+  const user = Auth.getUser();
+
+  // Calculate max date for the placeholder
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + parseInt(settings.maxBorrowDays));
+  const maxDateStr = maxDate.toISOString().split("T")[0];
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  const dateStr = prompt(
+    `Enter Return Date (YYYY-MM-DD)\nMax allowed: ${maxDateStr}`,
+    maxDateStr
+  );
+
+  if (dateStr) {
+    const res = Store.issueBook(bookId, user.username, dateStr);
+    if (res === "SUCCESS") {
+      alert("Book Issued Successfully!");
+      router.handleRoute();
+    } else {
+      alert("Failed: " + res);
+    }
+  }
+};
+
+window.processReturn = (txId) => {
+  if (confirm("Confirm return?")) {
+    const fine = Store.returnBook(txId);
+    if (fine > 0) alert(`Book Returned. FINE CHARGED: $${fine}`);
+    else alert("Book Returned.");
     router.handleRoute();
-    setTimeout(() => document.getElementById("searchInput")?.focus(), 0);
   }
-});
+};
 
-// 2. ADMIN: ADD/EDIT BOOK
+// 3. Social Features (Reviews, Likes, Complaints)
 document.body.addEventListener("submit", (e) => {
-  // Login
-  if (e.target.id === "loginForm") {
-    e.preventDefault();
-    const u = document.getElementById("login_user").value;
-    const p = document.getElementById("login_pass").value;
-    const r = document.querySelector('input[name="role"]:checked').value;
-    if (Auth.login(u, p, r)) window.location.hash = "dashboard";
-    else alert("Invalid Login");
+  e.preventDefault();
+
+  // Review Form
+  if (e.target.id === "reviewForm") {
+    const rating = document.getElementById("r_rating").value;
+    const comment = document.getElementById("r_comment").value;
+    const user = Auth.getUser();
+    if (window.currentBookId) {
+      Store.addReview(window.currentBookId, user.username, rating, comment);
+      router.handleRoute(); // Refresh to show review
+    }
   }
 
-  // Book Form
+  // Complaint Form
+  if (e.target.id === "complaintForm") {
+    const text = document.getElementById("c_text").value;
+    const user = Auth.getUser();
+    Store.addComplaint(user.username, text);
+    alert("Complaint Submitted");
+    e.target.reset();
+  }
+
+  // Settings Form
+  if (e.target.id === "settingsForm") {
+    const fine = document.getElementById("s_fine").value;
+    const days = document.getElementById("s_days").value;
+    Store.updateSettings({ finePerDay: fine, maxBorrowDays: days });
+    alert("Settings Saved!");
+  }
+
+  // Book Form (Admin)
   if (e.target.id === "bookForm") {
-    e.preventDefault();
     const data = {
       id: document.getElementById("b_id").value,
       title: document.getElementById("b_title").value,
@@ -78,85 +140,42 @@ document.body.addEventListener("submit", (e) => {
       isbn: document.getElementById("b_isbn").value,
       category: document.getElementById("b_category").value,
       totalStock: document.getElementById("b_stock").value,
+      description: document.getElementById("b_desc").value,
     };
-
-    if (data.id) Store.updateBook(data);
-    else Store.addBook(data);
-
-    window.resetForm();
+    Store.addBook(data); // Simplified for this example
     router.handleRoute();
+  }
+
+  // Login Form
+  if (e.target.id === "loginForm") {
+    const u = document.getElementById("login_user").value;
+    const p = document.getElementById("login_pass").value;
+    const r = document.querySelector('input[name="role"]:checked').value;
+    if (Auth.login(u, p, r)) window.location.hash = "dashboard";
+    else alert("Invalid Credentials");
   }
 });
 
-// 3. ADMIN: ISSUE / RETURN LOGIC
-window.manualIssue = () => {
-  // Simple prompt-based UI for now. Can be a Modal later.
-  const username = prompt("Enter Student Username:");
-  const bookId = prompt("Enter Book ID (See Inventory):"); // In real app, use a select dropdown
-  const days = prompt("Days to return:", "7");
-
-  if (username && bookId) {
-    const res = Store.issueBook(bookId, username, days);
-    if (res === "SUCCESS") {
-      alert("Book Issued Successfully");
-      router.handleRoute();
-    } else {
-      alert("Error: " + res);
-    }
-  }
+window.handleLike = (id, type) => {
+  Store.toggleLike(id, type);
+  router.handleRoute();
 };
 
-window.processReturn = (txId) => {
-  if (confirm("Process return for this book?")) {
-    const fine = Store.returnBook(txId);
-    if (fine > 0) alert(`Book Returned. LATE FINE COLLECTED: $${fine}`);
-    else alert("Book Returned on time.");
-    router.handleRoute();
-  }
-};
-
-// 4. STUDENT REQUEST (Simplified to auto-issue for demo, or request logic)
-window.handleRequest = (bookId, title) => {
-  if (confirm(`Request to borrow "${title}"?`)) {
-    // For this demo, we'll treat a request as an immediate issue for 7 days
-    // In a strict system, this would go to a "Pending" list first
-    const user = Auth.getUser();
-    const res = Store.issueBook(bookId, user.username, 7);
-    if (res === "SUCCESS")
-      alert("Book has been issued to you! Check 'My Inventory'.");
-    else alert("Failed: " + res);
-    router.handleRoute();
-  }
-};
-
-// 5. HELPER: LOAD EDIT FORM
-window.loadEdit = (id) => {
-  const book = Store.getState().books.find((b) => b.id == id);
-  if (book) {
-    document.getElementById("b_id").value = book.id;
-    document.getElementById("b_title").value = book.title;
-    document.getElementById("b_author").value = book.author;
-    document.getElementById("b_isbn").value = book.isbn;
-    document.getElementById("b_category").value = book.category || "Fiction";
-    document.getElementById("b_stock").value = book.totalStock;
-
-    document.getElementById("formBtn").innerText = "Save";
-    document.getElementById("cancelBtn").style.display = "inline";
-    window.scrollTo(0, 0);
-  }
-};
-
-window.resetForm = () => {
-  document.getElementById("bookForm").reset();
-  document.getElementById("b_id").value = "";
-  document.getElementById("formBtn").innerText = "+ Add";
-  document.getElementById("cancelBtn").style.display = "none";
-};
-
-window.handleDelete = (id) => {
-  if (confirm("Delete?")) {
-    Store.deleteBook(id);
-    router.handleRoute();
-  }
-};
 window.handleLogout = () => Auth.logout();
+
+// Theme Toggle
+document.body.addEventListener("click", (e) => {
+  if (e.target.id === "theme-toggle") {
+    Store.toggleTheme();
+    applyTheme();
+  }
+});
+
+// Search
+document.body.addEventListener("input", (e) => {
+  if (e.target.id === "searchInput") {
+    window.currentSearchTerm = e.target.value;
+    router.handleRoute();
+    setTimeout(() => document.getElementById("searchInput")?.focus(), 0);
+  }
+});

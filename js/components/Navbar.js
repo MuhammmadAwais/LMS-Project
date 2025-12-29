@@ -9,27 +9,29 @@ export default function Navbar() {
   if (isAdmin) {
     navLinks = `
             <a href="#dashboard" class="nav-link">Dashboard</a>
-            <a href="#books" class="nav-link">Manage Books</a>
-            <a href="#issue" class="nav-link">Requests & Issues</a>
-            <a href="#users" class="nav-link">Manage Users</a>
+            <a href="#books" class="nav-link">Books</a>
+            <a href="#issue" class="nav-link">Circulation</a>
+            <a href="#users" class="nav-link">Users</a>
+            <a href="#complaints" class="nav-link">Complaints</a>
+            <a href="#settings" class="nav-link">⚙️ Settings</a>
         `;
   } else {
-    // Student Links
     navLinks = `
             <a href="#dashboard" class="nav-link">Dashboard</a>
-            <a href="#books" class="nav-link">Library Search</a>
-            <a href="#mybooks" class="nav-link">My Inventory</a>
+            <a href="#books" class="nav-link">Library</a>
+            <a href="#mybooks" class="nav-link">My Books</a>
+            <a href="#complaints" class="nav-link">Support</a>
         `;
   }
 
   return `
-        <aside class="sidebar" id="main-sidebar">
+        <aside class="sidebar">
             <div class="sidebar-header">
                 <span>📚 LMS ${isAdmin ? "Admin" : "Student"}</span>
             </div>
             
             <div style="padding: 0 0 1rem 0; color: var(--text-muted); font-size: 0.9rem;">
-                Logged in as: <strong style="color: var(--primary);">${
+                User: <strong style="color: var(--primary);">${
                   user ? user.username : "Guest"
                 }</strong>
             </div>

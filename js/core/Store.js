@@ -1,6 +1,10 @@
-const DB_KEY = "lms_v4_pro";
+const DB_KEY = "lms_v5_ultimate";
 
 const seeds = {
+  settings: {
+    finePerDay: 10, // Default $10
+    maxBorrowDays: 14, // Default 2 weeks
+  },
   books: [
     {
       id: 1,
@@ -8,23 +12,17 @@ const seeds = {
       author: "Robert Martin",
       isbn: "978-0137",
       category: "Programming",
+      description: "A code of conduct for professional programmers.",
       totalStock: 5,
       availableStock: 5,
-      status: "Available", // 'Available' or 'Out of Stock'
-    },
-    {
-      id: 2,
-      title: "Harry Potter",
-      author: "J.K. Rowling",
-      isbn: "978-0321",
-      category: "Fiction",
-      totalStock: 2,
-      availableStock: 2,
       status: "Available",
+      reviews: [], // { user, rating, comment, date }
+      likes: 0,
+      dislikes: 0,
     },
   ],
-  // Tracks who has what: { bookId, username, issueDate, dueDate, status: 'Issued'|'Returned', fine: 0 }
   transactions: [],
+  complaints: [], // { id, user, text, date, status }
   users: [
     { username: "admin", password: "123", role: "admin", isBanned: false },
     { username: "student", password: "123", role: "student", isBanned: false },
@@ -47,26 +45,79 @@ export default class Store {
     localStorage.setItem(DB_KEY, JSON.stringify(data));
   }
 
-  // --- BOOK & STOCK METHODS ---
+  // --- SETTINGS ---
+  static getSettings() {
+    return this.getState().settings;
+  }
 
+  static updateSettings(newSettings) {
+    const state = this.getState();
+    state.settings = { ...state.settings, ...newSettings };
+    this.saveState(state);
+  }
+
+  // --- COMPLAINTS ---
+  static addComplaint(username, text) {
+    const state = this.getState();
+    state.complaints.push({
+      id: Date.now(),
+      user: username,
+      text,
+      date: new Date().toISOString(),
+      status: "Open",
+    });
+    this.saveState(state);
+  }
+
+  static getComplaints() {
+    return this.getState().complaints;
+  }
+
+  // --- BOOKS & REVIEWS ---
   static getBooks(query = "", category = "All") {
     const state = this.getState();
     let books = state.books;
-
-    if (category !== "All") {
+    if (category !== "All")
       books = books.filter((b) => b.category === category);
-    }
-
     if (query) {
-      const lowerQuery = query.toLowerCase();
+      const lower = query.toLowerCase();
       books = books.filter(
         (b) =>
-          b.title.toLowerCase().includes(lowerQuery) ||
-          b.author.toLowerCase().includes(lowerQuery) ||
-          b.isbn.includes(lowerQuery)
+          b.title.toLowerCase().includes(lower) ||
+          b.author.toLowerCase().includes(lower)
       );
     }
     return books;
+  }
+
+  static getBookById(id) {
+    return this.getState().books.find((b) => b.id == id);
+  }
+
+  static addReview(bookId, username, rating, comment) {
+    const state = this.getState();
+    const book = state.books.find((b) => b.id == bookId);
+    if (book) {
+      if (!book.reviews) book.reviews = [];
+      book.reviews.push({
+        user: username,
+        rating: parseInt(rating),
+        comment,
+        date: new Date().toISOString(),
+      });
+      this.saveState(state);
+    }
+  }
+
+  static toggleLike(bookId, type) {
+    // type = 'like' or 'dislike'
+    const state = this.getState();
+    const book = state.books.find((b) => b.id == bookId);
+    if (book) {
+      if (type === "like") book.likes = (book.likes || 0) + 1;
+      else book.dislikes = (book.dislikes || 0) + 1;
+      this.saveState(state);
+    }
   }
 
   static addBook(book) {
@@ -74,17 +125,18 @@ export default class Store {
     book.id = Date.now();
     book.totalStock = parseInt(book.totalStock);
     book.availableStock = parseInt(book.totalStock);
-    book.status = "Available";
+    book.reviews = [];
+    book.likes = 0;
+    book.dislikes = 0;
     state.books.push(book);
     this.saveState(state);
   }
 
+  // ... existing updateBook and deleteBook (keep as is) ...
   static updateBook(updatedBook) {
     const state = this.getState();
     const index = state.books.findIndex((b) => b.id == updatedBook.id);
     if (index !== -1) {
-      // Logic to adjust available stock if total stock changes could go here
-      // For simplicity, we overwrite basic details
       const old = state.books[index];
       state.books[index] = { ...old, ...updatedBook };
       this.saveState(state);
@@ -97,37 +149,40 @@ export default class Store {
     this.saveState(state);
   }
 
-  // --- TRANSACTION ENGINE (ISSUE/RETURN) ---
-
+  // --- TRANSACTIONS ---
   static getTransactions() {
     return this.getState().transactions;
   }
 
-  static issueBook(bookId, username, daysToReturn = 7) {
+  // Updated Issue: Takes a specific return date requested by user
+  static issueBook(bookId, username, requestedDateStr) {
     const state = this.getState();
     const user = state.users.find((u) => u.username === username);
     const book = state.books.find((b) => b.id == bookId);
+    const settings = state.settings;
 
-    // Validation
     if (!user || user.isBanned) return "BANNED";
     if (!book || book.availableStock < 1) return "OUT_OF_STOCK";
 
-    // Decrease Stock
-    book.availableStock--;
-    if (book.availableStock === 0) book.status = "Out of Stock";
+    // Validate Date
+    const today = new Date();
+    const reqDate = new Date(requestedDateStr);
+    const maxDate = new Date();
+    maxDate.setDate(today.getDate() + parseInt(settings.maxBorrowDays));
 
-    // Create Transaction
-    const issueDate = new Date();
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + parseInt(daysToReturn));
+    if (reqDate > maxDate)
+      return `MAX_DAYS_EXCEEDED (Max: ${settings.maxBorrowDays} days)`;
+    if (reqDate < today) return "INVALID_DATE";
+
+    book.availableStock--;
 
     const transaction = {
       id: Date.now(),
       bookId: book.id,
       bookTitle: book.title,
       username: username,
-      issueDate: issueDate.toISOString(),
-      dueDate: dueDate.toISOString(),
+      issueDate: today.toISOString(),
+      dueDate: reqDate.toISOString(), // Set to user's requested date
       returnDate: null,
       status: "Issued",
       fine: 0,
@@ -140,50 +195,36 @@ export default class Store {
 
   static returnBook(transactionId) {
     const state = this.getState();
-    const txIndex = state.transactions.findIndex((t) => t.id == transactionId);
+    const tx = state.transactions.find((t) => t.id == transactionId);
+    const settings = state.settings;
 
-    if (txIndex === -1) return false;
-    const tx = state.transactions[txIndex];
+    if (!tx) return false;
 
-    // 1. Calculate Fine
     const today = new Date();
     const due = new Date(tx.dueDate);
     let fine = 0;
 
+    // Calculate Fine
     if (today > due) {
       const diffTime = Math.abs(today - due);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      fine = diffDays * 1; // $1 per day
+      fine = diffDays * parseInt(settings.finePerDay);
     }
 
-    // 2. Update Transaction
     tx.status = "Returned";
     tx.returnDate = today.toISOString();
     tx.fine = fine;
 
-    // 3. Restore Stock
     const book = state.books.find((b) => b.id == tx.bookId);
-    if (book) {
-      book.availableStock++;
-      if (book.availableStock > 0) book.status = "Available";
-    }
+    if (book) book.availableStock++;
 
     this.saveState(state);
-    return fine; // Return fine amount to display
+    return fine;
   }
 
-  // --- USER MANAGEMENT ---
+  // --- AUTH ---
   static getUsers() {
     return this.getState().users;
-  }
-
-  static signup(username, password) {
-    /* Same as before */
-    const state = this.getState();
-    if (state.users.find((u) => u.username === username)) return false;
-    state.users.push({ username, password, role: "student", isBanned: false });
-    this.saveState(state);
-    return true;
   }
 
   static login(username, password, role) {
@@ -193,8 +234,15 @@ export default class Store {
     );
   }
 
+  static signup(username, password) {
+    const state = this.getState();
+    if (state.users.find((u) => u.username === username)) return false;
+    state.users.push({ username, password, role: "student", isBanned: false });
+    this.saveState(state);
+    return true;
+  }
+
   static toggleTheme() {
-    /* Same as before */
     const state = this.getState();
     state.theme = state.theme === "light" ? "dark" : "light";
     this.saveState(state);
