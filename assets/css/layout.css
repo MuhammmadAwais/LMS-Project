@@ -1,60 +1,176 @@
 /* assets/css/layout.css */
+
+/* The main container for the logged-in state */
 .app-container {
     display: grid;
-    grid-template-columns: 260px 1fr; /* Sidebar fixed, content flex */
-    grid-template-rows: 100vh;
+    grid-template-columns: 280px 1fr; /* Fixed sidebar width, rest for content */
     height: 100vh;
+    overflow: hidden;
 }
 
-/* Sidebar Styling */
+/* --- Sidebar Styling --- */
 .sidebar {
     background-color: var(--bg-sidebar);
     color: var(--text-on-dark);
     display: flex;
     flex-direction: column;
-    padding: 1.5rem;
-    border-right: 1px solid var(--border);
+    height: 100%;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    z-index: 100;
 }
 
 .sidebar-header {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 3rem;
+    padding: 1.5rem;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 1rem;
+}
+
+.brand {
+    font-family: var(--font-header);
+    font-size: 1.75rem;
+    font-weight: 700;
     color: var(--primary);
+    letter-spacing: 0.5px;
 }
 
-/* Main Content Area */
-.main-content {
-    background-color: var(--bg-body);
-    overflow-y: auto; /* Internal scrolling */
+.user-profile-mini {
+    margin: 0 1rem 1.5rem 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.avatar {
+    width: 48px; height: 48px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; font-weight: 600; font-family: var(--font-header);
+    box-shadow: var(--shadow);
+}
+
+.nav-menu {
+    flex: 1; /* Takes up available space */
+    padding: 0 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow-y: auto;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.nav-link i { font-size: 1.4rem; }
+
+.nav-link:hover, .nav-link.active {
+    background: var(--primary);
+    color: white;
+    box-shadow: var(--shadow);
+}
+
+.sidebar-footer {
+    padding: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* --- Main Content Area Styling --- */
+#content-area {
+    height: 100vh;
+    overflow-y: auto;
     padding: 2rem;
-    position: relative;
+    background-color: var(--bg-body);
 }
 
-/* Mobile Responsiveness */
-@media (max-width: 768px) {
+/* --- Page Header --- */
+.page-header {
+    margin-bottom: 2.5rem;
+}
+.page-title {
+    font-size: 2.25rem;
+    margin-bottom: 0.5rem;
+}
+.page-subtitle {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+}
+
+/* --- RESPONSIVE DESIGN (Mobile) --- */
+@media (max-width: 900px) {
     .app-container {
-        grid-template-columns: 1fr; /* Stack layout */
-        grid-template-rows: auto 1fr;
+        grid-template-columns: 1fr; /* Single column */
+        grid-template-rows: 1fr auto; /* Content takes top, sidebar takes bottom */
     }
-    
+
+    #content-area {
+        padding: 1.5rem;
+        padding-bottom: 80px; /* Space for bottom nav */
+    }
+
     .sidebar {
+        flex-direction: row; /* Horizontal layout */
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        height: auto;
+        padding: 0.5rem;
+        border-right: none;
+        border-top: 1px solid var(--border);
+        justify-content: space-around; /* Evenly space icons */
+        background: var(--bg-card); /* Use card bg so it doesn't clash */
+        box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+    }
+    
+    /* Hide desktop-only sidebar elements */
+    .sidebar-header, .user-profile-mini, .sidebar-footer { display: none; }
+    
+    .nav-menu {
         flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem;
-        margin-bottom: 0;
+        padding: 0;
+        justify-content: space-around;
+        width: 100%;
+        overflow-y: visible;
+    }
+
+    .nav-link {
+        flex-direction: column;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        background: none !important; /* Remove active background */
+        box-shadow: none !important;
     }
     
-    .sidebar nav {
-        display: none; /* Hide nav on mobile for simplicity in this demo */
-        /* In a real app, you'd add a hamburger menu toggle here */
+    .nav-link i {
+        font-size: 1.6rem;
+        margin-bottom: 2px;
     }
     
-    .sidebar-header {
-        margin-bottom: 0;
+    /* On mobile, active state is just color */
+    .nav-link.active, .nav-link:hover {
+        color: var(--primary);
+    }
+    
+    /* Hide text labels on very small screens if needed */
+    @media (max-width: 400px) {
+        .nav-link span { display: none; }
     }
 }
