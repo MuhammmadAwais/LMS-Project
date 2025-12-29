@@ -4,12 +4,11 @@ import Auth from "../core/Auth.js";
 export default function BookDetail() {
   const id = window.currentBookId;
   if (!id)
-    return `<div class="fade-in"><h1>Error: No Book Selected</h1><button onclick="window.history.back()">Back</button></div>`;
+    return `<div class="fade-in"><h1>No Book Selected</h1><button class="btn btn-outline" onclick="window.history.back()">Back</button></div>`;
 
   const book = Store.getBookById(id);
-  const user = Auth.getUser();
+  if (!book) return `<div class="fade-in"><h1>Book Not Found</h1></div>`;
 
-  // Prevent crash if reviews are undefined
   const reviews = book.reviews || [];
   const reviewsHtml =
     reviews
@@ -33,7 +32,7 @@ export default function BookDetail() {
             <button class="btn btn-outline" onclick="window.location.hash='books'" style="margin-bottom:1rem;">← Back</button>
             
             <div class="card">
-                <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap;">
                     <div>
                         <h1 style="color:var(--primary); margin-bottom:0.5rem;">${
                           book.title
@@ -95,7 +94,7 @@ export default function BookDetail() {
                                 <option value="2">★★</option>
                                 <option value="1">★</option>
                             </select>
-                            <input type="text" id="r_comment" placeholder="Write a review..." required style="flex:1; padding:0.5rem; min-width: 200px;">
+                            <input type="text" id="r_comment" placeholder="Write a review..." required style="flex:1; padding:0.5rem; min-width:200px;">
                             <button type="submit" class="btn btn-primary">Submit</button>
                         </div>
                     </form>

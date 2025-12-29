@@ -2,8 +2,8 @@ const DB_KEY = "lms_v5_ultimate";
 
 const seeds = {
   settings: {
-    finePerDay: 10, // Default $10
-    maxBorrowDays: 14, // Default 2 weeks
+    finePerDay: 10,
+    maxBorrowDays: 14,
   },
   books: [
     {
@@ -16,13 +16,13 @@ const seeds = {
       totalStock: 5,
       availableStock: 5,
       status: "Available",
-      reviews: [], // { user, rating, comment, date }
+      reviews: [],
       likes: 0,
       dislikes: 0,
     },
   ],
   transactions: [],
-  complaints: [], // { id, user, text, date, status }
+  complaints: [], // { id, user, text, date, status, reply: "" }
   users: [
     { username: "admin", password: "123", role: "admin", isBanned: false },
     { username: "student", password: "123", role: "student", isBanned: false },
@@ -47,7 +47,7 @@ export default class Store {
 
   // --- SETTINGS ---
   static getSettings() {
-    return this.getState().settings;
+    return this.getState().settings || seeds.settings;
   }
 
   static updateSettings(newSettings) {
@@ -56,21 +56,34 @@ export default class Store {
     this.saveState(state);
   }
 
-  // --- COMPLAINTS ---
+  // --- COMPLAINTS & REPLIES (NEW) ---
   static addComplaint(username, text) {
     const state = this.getState();
+    if (!state.complaints) state.complaints = [];
+
     state.complaints.push({
       id: Date.now(),
       user: username,
       text,
       date: new Date().toISOString(),
       status: "Open",
+      reply: null, // Placeholder for admin reply
     });
     this.saveState(state);
   }
 
+  static replyToComplaint(id, replyText) {
+    const state = this.getState();
+    const complaint = state.complaints.find((c) => c.id == id);
+    if (complaint) {
+      complaint.reply = replyText;
+      complaint.status = "Resolved";
+      this.saveState(state);
+    }
+  }
+
   static getComplaints() {
-    return this.getState().complaints;
+    return this.getState().complaints || [];
   }
 
   // --- BOOKS & REVIEWS ---
@@ -110,7 +123,6 @@ export default class Store {
   }
 
   static toggleLike(bookId, type) {
-    // type = 'like' or 'dislike'
     const state = this.getState();
     const book = state.books.find((b) => b.id == bookId);
     if (book) {
@@ -132,7 +144,6 @@ export default class Store {
     this.saveState(state);
   }
 
-  // ... existing updateBook and deleteBook (keep as is) ...
   static updateBook(updatedBook) {
     const state = this.getState();
     const index = state.books.findIndex((b) => b.id == updatedBook.id);
@@ -154,25 +165,23 @@ export default class Store {
     return this.getState().transactions;
   }
 
-  // Updated Issue: Takes a specific return date requested by user
   static issueBook(bookId, username, requestedDateStr) {
     const state = this.getState();
     const user = state.users.find((u) => u.username === username);
     const book = state.books.find((b) => b.id == bookId);
-    const settings = state.settings;
+    const settings = state.settings || seeds.settings;
 
     if (!user || user.isBanned) return "BANNED";
     if (!book || book.availableStock < 1) return "OUT_OF_STOCK";
 
-    // Validate Date
+    // Date Validation
     const today = new Date();
     const reqDate = new Date(requestedDateStr);
     const maxDate = new Date();
     maxDate.setDate(today.getDate() + parseInt(settings.maxBorrowDays));
 
-    if (reqDate > maxDate)
-      return `MAX_DAYS_EXCEEDED (Max: ${settings.maxBorrowDays} days)`;
-    if (reqDate < today) return "INVALID_DATE";
+    // If simple manual issue (no date provided), default to max days
+    const finalDate = requestedDateStr ? reqDate : maxDate;
 
     book.availableStock--;
 
@@ -182,7 +191,7 @@ export default class Store {
       bookTitle: book.title,
       username: username,
       issueDate: today.toISOString(),
-      dueDate: reqDate.toISOString(), // Set to user's requested date
+      dueDate: finalDate.toISOString(),
       returnDate: null,
       status: "Issued",
       fine: 0,
@@ -196,7 +205,7 @@ export default class Store {
   static returnBook(transactionId) {
     const state = this.getState();
     const tx = state.transactions.find((t) => t.id == transactionId);
-    const settings = state.settings;
+    const settings = state.settings || seeds.settings;
 
     if (!tx) return false;
 
@@ -204,7 +213,6 @@ export default class Store {
     const due = new Date(tx.dueDate);
     let fine = 0;
 
-    // Calculate Fine
     if (today > due) {
       const diffTime = Math.abs(today - due);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));

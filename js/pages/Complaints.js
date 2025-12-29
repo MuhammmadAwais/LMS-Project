@@ -13,35 +13,73 @@ export default function Complaints() {
       .map(
         (c) => `
             <tr>
-                <td>${c.user}</td>
-                <td>${c.text}</td>
+                <td><strong>${c.user}</strong></td>
+                <td>
+                    <p>${c.text}</p>
+                    ${
+                      c.reply
+                        ? `<p style="color:var(--success); font-size:0.9rem; border-left:2px solid var(--success); padding-left:5px; margin-top:5px;"><strong>Reply:</strong> ${c.reply}</p>`
+                        : ""
+                    }
+                </td>
                 <td>${new Date(c.date).toLocaleDateString()}</td>
-                <td><span style="padding:2px 6px; background:#e0e7ff; color:blue; border-radius:4px;">${
-                  c.status
-                }</span></td>
+                <td>
+                    ${
+                      c.status === "Resolved"
+                        ? '<span style="color:green;">✔ Resolved</span>'
+                        : `<button class="btn btn-primary" onclick="window.openReply(${c.id})">Reply</button>`
+                    }
+                </td>
             </tr>
         `
       )
       .join("");
 
     content = `
-            <h3>All User Complaints</h3>
-            <table>
-                <thead><tr><th>User</th><th>Complaint</th><th>Date</th><th>Status</th></tr></thead>
-                <tbody>${
-                  rows.length
-                    ? rows
-                    : '<tr><td colspan="4">No complaints.</td></tr>'
-                }</tbody>
-            </table>
+            <h3>User Complaints & Feedback</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>User</th><th>Complaint / Reply</th><th>Date</th><th>Action</th></tr></thead>
+                    <tbody>${
+                      rows.length
+                        ? rows
+                        : '<tr><td colspan="4">No complaints found.</td></tr>'
+                    }</tbody>
+                </table>
+            </div>
         `;
   } else {
+    // Student View
+    const myComplaints = complaints.filter((c) => c.user === user.username);
+    const historyRows = myComplaints
+      .map(
+        (c) => `
+            <div class="card" style="margin-bottom:1rem;">
+                <div style="display:flex; justify-content:space-between;">
+                    <strong>${new Date(c.date).toLocaleDateString()}</strong>
+                    <span style="color:${
+                      c.status === "Resolved" ? "green" : "orange"
+                    }">${c.status}</span>
+                </div>
+                <p style="margin-top:0.5rem;">${c.text}</p>
+                ${
+                  c.reply
+                    ? `<hr><p style="color:var(--success);"><strong>Admin Reply:</strong> ${c.reply}</p>`
+                    : ""
+                }
+            </div>
+        `
+      )
+      .join("");
+
     content = `
             <h3>Submit a Complaint / Feedback</h3>
-            <form id="complaintForm" style="margin-top:1rem;">
-                <textarea id="c_text" rows="5" placeholder="Describe your issue..." style="width:100%; padding:0.5rem; border-radius:6px; border:1px solid var(--border);" required></textarea>
+            <form id="complaintForm" style="margin-top:1rem; margin-bottom:2rem;">
+                <textarea id="c_text" rows="4" placeholder="Describe your issue..." style="width:100%; padding:0.5rem; border-radius:6px; border:1px solid var(--border);" required></textarea>
                 <button type="submit" class="btn btn-danger" style="margin-top:1rem;">Submit Complaint</button>
             </form>
+            <h3>My History</h3>
+            ${historyRows || "<p>No history yet.</p>"}
         `;
   }
 
