@@ -19,8 +19,8 @@ const seeds = {
       reviews: [],
       likes: 0,
       dislikes: 0,
-      likedBy: [], // New: Track users who liked
-      dislikedBy: [], // New: Track users who disliked
+      likedBy: [],
+      dislikedBy: [],
     },
   ],
   transactions: [],
@@ -84,7 +84,6 @@ export default class Store {
     }
   }
 
-  // NEW: Delete Complaint
   static deleteComplaint(id) {
     const state = this.getState();
     state.complaints = state.complaints.filter((c) => c.id != id);
@@ -122,7 +121,7 @@ export default class Store {
     if (book) {
       if (!book.reviews) book.reviews = [];
       book.reviews.push({
-        id: Date.now(), // Added ID for deletion
+        id: Date.now(),
         user: username,
         rating: parseInt(rating),
         comment,
@@ -132,7 +131,6 @@ export default class Store {
     }
   }
 
-  // NEW: Delete Review
   static deleteReview(bookId, reviewId) {
     const state = this.getState();
     const book = state.books.find((b) => b.id == bookId);
@@ -142,7 +140,6 @@ export default class Store {
     }
   }
 
-  // FIXED: Toggle Like/Dislike Logic
   static toggleLike(bookId, username, type) {
     const state = this.getState();
     const book = state.books.find((b) => b.id == bookId);
@@ -151,28 +148,21 @@ export default class Store {
       if (!book.dislikedBy) book.dislikedBy = [];
 
       if (type === "like") {
-        // Remove from dislikes if present
         book.dislikedBy = book.dislikedBy.filter((u) => u !== username);
-
-        // Toggle Like
         if (book.likedBy.includes(username)) {
-          book.likedBy = book.likedBy.filter((u) => u !== username); // Unlike
+          book.likedBy = book.likedBy.filter((u) => u !== username);
         } else {
-          book.likedBy.push(username); // Like
+          book.likedBy.push(username);
         }
       } else {
-        // Remove from likes if present
         book.likedBy = book.likedBy.filter((u) => u !== username);
-
-        // Toggle Dislike
         if (book.dislikedBy.includes(username)) {
-          book.dislikedBy = book.dislikedBy.filter((u) => u !== username); // Undislike
+          book.dislikedBy = book.dislikedBy.filter((u) => u !== username);
         } else {
-          book.dislikedBy.push(username); // Dislike
+          book.dislikedBy.push(username);
         }
       }
 
-      // Update Counts
       book.likes = book.likedBy.length;
       book.dislikes = book.dislikedBy.length;
 
@@ -278,7 +268,7 @@ export default class Store {
     return fine;
   }
 
-  // --- AUTH ---
+  // --- AUTH & USERS ---
   static getUsers() {
     return this.getState().users;
   }
@@ -292,12 +282,20 @@ export default class Store {
 
   static signup(username, password) {
     const state = this.getState();
-    // Check if username exists
     if (state.users.find((u) => u.username === username)) return false;
-
     state.users.push({ username, password, role: "student", isBanned: false });
     this.saveState(state);
     return true;
+  }
+
+  // NEW: Toggle Ban Method
+  static toggleBan(username) {
+    const state = this.getState();
+    const user = state.users.find((u) => u.username === username);
+    if (user) {
+      user.isBanned = !user.isBanned;
+      this.saveState(state);
+    }
   }
 
   static toggleTheme() {

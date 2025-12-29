@@ -84,7 +84,7 @@ document.body.addEventListener("submit", (e) => {
     else alert("Invalid Login");
   }
 
-  // Signup (Fixed)
+  // Signup
   if (e.target.id === "signupForm") {
     e.preventDefault();
     const user = document.getElementById("sign_user").value;
@@ -98,7 +98,6 @@ document.body.addEventListener("submit", (e) => {
       }
       e.target.reset();
       alert("Account Created Successfully! Switching to Login...");
-      // Delay switch to let user read message
       setTimeout(() => window.switchAuthTab("login"), 1000);
     } else {
       alert("Username already exists!");
@@ -235,6 +234,16 @@ window.processReturn = (txId) => {
   }
 };
 
+// NEW: Student Return Function
+window.studentReturn = (txId) => {
+  if (confirm("Do you want to return this book now?")) {
+    const fine = Store.returnBook(txId);
+    if (fine > 0) alert(`Book Returned. You had a fine of $${fine}`);
+    else alert("Book Returned Successfully.");
+    router.handleRoute();
+  }
+};
+
 window.loadEdit = (id) => {
   const book = Store.getBookById(id);
   if (book) {
@@ -273,6 +282,14 @@ window.handleLike = (id, type) => {
 window.handleDelete = (id) => {
   if (confirm("Delete?")) {
     Store.deleteBook(id);
+    router.handleRoute();
+  }
+};
+
+// NEW: Ban User Function
+window.toggleBan = (username) => {
+  if (confirm(`Are you sure you want to change ban status for ${username}?`)) {
+    Store.toggleBan(username);
     router.handleRoute();
   }
 };

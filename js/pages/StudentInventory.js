@@ -17,7 +17,11 @@ export default function StudentInventory() {
             <tr>
                 <td>${tx.bookTitle}</td>
                 <td>${due}</td>
-                <td><span style="color:orange;">Active</span></td>
+                <td>
+                    <button class="btn btn-outline" onclick="window.studentReturn(${tx.id})" style="padding:0.25rem 0.5rem; font-size: 0.9rem;">
+                        Return Now
+                    </button>
+                </td>
             </tr>
         `;
     })
@@ -46,7 +50,7 @@ export default function StudentInventory() {
             <div class="card" style="margin-top:2rem;">
                 <h3 style="color:var(--primary);">Currently Borrowed</h3>
                 <table>
-                    <thead><tr><th>Book</th><th>Due Date</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Book</th><th>Due Date</th><th>Action</th></tr></thead>
                     <tbody>${
                       activeRows.length
                         ? activeRows
