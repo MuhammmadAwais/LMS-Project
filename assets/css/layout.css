@@ -1,0 +1,60 @@
+/* assets/css/layout.css */
+.app-container {
+    display: grid;
+    grid-template-columns: 260px 1fr; /* Sidebar fixed, content flex */
+    grid-template-rows: 100vh;
+    height: 100vh;
+}
+
+/* Sidebar Styling */
+.sidebar {
+    background-color: var(--bg-sidebar);
+    color: var(--text-on-dark);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    border-right: 1px solid var(--border);
+}
+
+.sidebar-header {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary);
+}
+
+/* Main Content Area */
+.main-content {
+    background-color: var(--bg-body);
+    overflow-y: auto; /* Internal scrolling */
+    padding: 2rem;
+    position: relative;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .app-container {
+        grid-template-columns: 1fr; /* Stack layout */
+        grid-template-rows: auto 1fr;
+    }
+    
+    .sidebar {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        margin-bottom: 0;
+    }
+    
+    .sidebar nav {
+        display: none; /* Hide nav on mobile for simplicity in this demo */
+        /* In a real app, you'd add a hamburger menu toggle here */
+    }
+    
+    .sidebar-header {
+        margin-bottom: 0;
+    }
+}

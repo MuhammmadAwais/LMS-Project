@@ -1,0 +1,45 @@
+/* assets/css/main.css */
+:root {
+    /* Light Mode Variables */
+    --bg-body: #F3F4F6;
+    --bg-card: #FFFFFF;
+    --bg-sidebar: #111827; /* Dark sidebar for contrast */
+    --text-main: #1F2937;
+    --text-muted: #6B7280;
+    --text-on-dark: #F9FAFB;
+    
+    --primary: #4F46E5; /* Indigo-600 */
+    --primary-hover: #4338CA;
+    --danger: #EF4444;
+    --success: #10B981;
+    
+    --border: #E5E7EB;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark Mode Overrides - Activated by adding .dark class to body */
+body.dark {
+    --bg-body: #0F172A; /* Slate-900 */
+    --bg-card: #1E293B; /* Slate-800 */
+    --bg-sidebar: #020617;
+    --text-main: #F3F4F6;
+    --text-muted: #94A3B8;
+    --text-on-dark: #F3F4F6;
+    --border: #334155;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    height: 100vh;
+    overflow: hidden; /* Prevent body scroll, we scroll main area */
+}
