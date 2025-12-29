@@ -5,20 +5,34 @@ export default function Settings() {
 
   return `
         <div class="fade-in">
-            <h1>System Settings</h1>
-            <div class="card" style="max-width: 500px; margin-top:2rem;">
+            <header class="page-header">
+                <h1 class="page-title">System Settings</h1>
+                <p class="page-subtitle">Configure library rules and fines</p>
+            </header>
+
+            <div class="card" style="max-width: 500px;">
                 <form id="settingsForm">
-                    <div class="input-group">
-                        <label>Fine Per Day ($)</label>
-                        <input type="number" id="s_fine" value="${settings.finePerDay}" required>
-                        <small style="color:var(--text-muted);">Amount charged per day after due date.</small>
+                    <div class="form-group">
+                        <label class="form-label">Fine Per Day ($)</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-dollar'></i>
+                            <input type="number" id="s_fine" class="form-input" value="${settings.finePerDay}" required>
+                        </div>
+                        <small style="color:var(--text-muted); display: block; margin-top: 5px;">Amount charged per day after due date.</small>
                     </div>
-                    <div class="input-group">
-                        <label>Max Borrowing Duration (Days)</label>
-                        <input type="number" id="s_days" value="${settings.maxBorrowDays}" required>
-                        <small style="color:var(--text-muted);">Maximum days a student can hold a book.</small>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Max Borrowing Duration (Days)</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-calendar-event'></i>
+                            <input type="number" id="s_days" class="form-input" value="${settings.maxBorrowDays}" required>
+                        </div>
+                        <small style="color:var(--text-muted); display: block; margin-top: 5px;">Maximum days a student can hold a book.</small>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width:100%;">Save Settings</button>
+                    
+                    <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 1rem;">
+                        <i class='bx bx-save'></i> Save Settings
+                    </button>
                 </form>
             </div>
         </div>

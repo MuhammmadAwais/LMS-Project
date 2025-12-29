@@ -15,11 +15,11 @@ export default function StudentInventory() {
       const due = new Date(tx.dueDate).toLocaleDateString();
       return `
             <tr>
-                <td>${tx.bookTitle}</td>
-                <td>${due}</td>
+                <td><strong>${tx.bookTitle}</strong></td>
+                <td><i class='bx bx-calendar'></i> ${due}</td>
                 <td>
-                    <button class="btn btn-outline" onclick="window.studentReturn(${tx.id})" style="padding:0.25rem 0.5rem; font-size: 0.9rem;">
-                        Return Now
+                    <button class="btn btn-sm btn-outline" onclick="window.studentReturn(${tx.id})">
+                        <i class='bx bx-revision'></i> Return Now
                     </button>
                 </td>
             </tr>
@@ -32,11 +32,11 @@ export default function StudentInventory() {
       (tx) => `
         <tr>
             <td>${tx.bookTitle}</td>
-            <td>Returned: ${new Date(tx.returnDate).toLocaleDateString()}</td>
+            <td>${new Date(tx.returnDate).toLocaleDateString()}</td>
             <td>${
               tx.fine > 0
-                ? `<span style="color:red;">$${tx.fine} Fine Paid</span>`
-                : '<span style="color:green;">On Time</span>'
+                ? `<span class="badge badge-danger">Paid $${tx.fine} Fine</span>`
+                : '<span class="badge badge-success">On Time</span>'
             }</td>
         </tr>
     `
@@ -45,30 +45,41 @@ export default function StudentInventory() {
 
   return `
         <div class="fade-in">
-            <h1>My Library Card</h1>
+            <header class="page-header">
+                <h1 class="page-title">My Library Card</h1>
+                <p class="page-subtitle">Your borrowing history and active books</p>
+            </header>
             
-            <div class="card" style="margin-top:2rem;">
-                <h3 style="color:var(--primary);">Currently Borrowed</h3>
-                <table>
-                    <thead><tr><th>Book</th><th>Due Date</th><th>Action</th></tr></thead>
-                    <tbody>${
-                      activeRows.length
-                        ? activeRows
-                        : '<tr><td colspan="3">No active books.</td></tr>'
-                    }</tbody>
-                </table>
+            <div class="card" style="margin-bottom: 2rem;">
+                <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 10px;">
+                    <i class='bx bx-book-open'></i> Currently Borrowed
+                </h3>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead><tr><th>Book</th><th>Due Date</th><th>Action</th></tr></thead>
+                        <tbody>${
+                          activeRows.length
+                            ? activeRows
+                            : '<tr><td colspan="3" style="text-align:center; color: var(--text-muted);">No active books.</td></tr>'
+                        }</tbody>
+                    </table>
+                </div>
             </div>
 
-            <div class="card" style="margin-top:2rem; opacity: 0.8;">
-                <h3>History</h3>
-                <table>
-                    <thead><tr><th>Book</th><th>Returned On</th><th>Remarks</th></tr></thead>
-                    <tbody>${
-                      historyRows.length
-                        ? historyRows
-                        : '<tr><td colspan="3">No history yet.</td></tr>'
-                    }</tbody>
-                </table>
+            <div class="card" style="opacity: 0.9;">
+                <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;">
+                    <i class='bx bx-history'></i> History
+                </h3>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead><tr><th>Book</th><th>Returned On</th><th>Remarks</th></tr></thead>
+                        <tbody>${
+                          historyRows.length
+                            ? historyRows
+                            : '<tr><td colspan="3" style="text-align:center; color: var(--text-muted);">No history yet.</td></tr>'
+                        }</tbody>
+                    </table>
+                </div>
             </div>
         </div>
     `;

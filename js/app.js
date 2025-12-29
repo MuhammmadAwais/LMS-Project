@@ -13,9 +13,12 @@ import BookDetail from "./pages/BookDetail.js";
 import Settings from "./pages/Settings.js";
 import Complaints from "./pages/Complaints.js";
 
+// Initialize Data Store
 Store.init();
 
 const app = document.getElementById("app");
+
+// --- THEME & LAYOUT LOGIC ---
 
 const applyTheme = () => {
   const theme = Store.getState().theme || "light";
@@ -24,9 +27,11 @@ const applyTheme = () => {
 };
 
 const renderLayout = () => {
+  // If we are on login page or root with no hash, show full screen content
   if (window.location.hash === "#login" || window.location.hash === "") {
-    app.innerHTML = `<main id="page-content" style="background: var(--bg-body); min-height: 100vh; padding: 2rem; display: flex; justify-content: center;"></main>`;
+    app.innerHTML = `<main id="page-content" style="background: var(--bg-body); min-height: 100vh;"></main>`;
   } else {
+    // Otherwise show the Admin/Student Dashboard Layout (Sidebar + Content)
     app.innerHTML = `
             <div class="app-container">
                 ${Navbar()}
@@ -50,10 +55,13 @@ const routes = {
 };
 
 window.addEventListener("hashchange", renderLayout);
+// Initial render
 renderLayout();
+
+// Initialize Router (This handles injecting the page content into #page-content)
 const router = new Router(routes);
 
-// --- GLOBAL EVENT LISTENERS ---
+// --- GLOBAL EVENT LISTENERS (BUSINESS LOGIC) ---
 
 window.viewBook = (id) => {
   window.currentBookId = id;
@@ -79,9 +87,11 @@ document.body.addEventListener("submit", (e) => {
     e.preventDefault();
     const u = document.getElementById("login_user").value;
     const p = document.getElementById("login_pass").value;
-    const r = document.querySelector('input[name="role"]:checked').value;
+    const roleElem = document.querySelector('input[name="role"]:checked');
+    const r = roleElem ? roleElem.value : "student";
+
     if (Auth.login(u, p, r)) window.location.hash = "dashboard";
-    else alert("Invalid Login");
+    else alert("Invalid Login Credentials");
   }
 
   // Signup
@@ -104,6 +114,7 @@ document.body.addEventListener("submit", (e) => {
     }
   }
 
+  // Book Add/Edit Form
   if (e.target.id === "bookForm") {
     e.preventDefault();
     const data = {
@@ -123,6 +134,7 @@ document.body.addEventListener("submit", (e) => {
     router.handleRoute();
   }
 
+  // Settings Form
   if (e.target.id === "settingsForm") {
     e.preventDefault();
     const fine = document.getElementById("s_fine").value;
@@ -131,6 +143,7 @@ document.body.addEventListener("submit", (e) => {
     alert("Settings Saved!");
   }
 
+  // Complaint Form
   if (e.target.id === "complaintForm") {
     e.preventDefault();
     const text = document.getElementById("c_text").value;
@@ -141,6 +154,7 @@ document.body.addEventListener("submit", (e) => {
     router.handleRoute();
   }
 
+  // Review Form
   if (e.target.id === "reviewForm") {
     e.preventDefault();
     const rating = document.getElementById("r_rating").value;
@@ -153,30 +167,26 @@ document.body.addEventListener("submit", (e) => {
   }
 });
 
-// Auth Switcher
+// Auth Switcher Helper
 window.switchAuthTab = (tab) => {
   const loginForm = document.getElementById("loginForm");
   const signupForm = document.getElementById("signupForm");
-  const loginTab = document.getElementById("tab-login");
-  const signupTab = document.getElementById("tab-signup");
+  const tabLogin = document.getElementById("tab-login");
+  const tabSignup = document.getElementById("tab-signup");
   const msg = document.getElementById("signup-msg");
 
   if (msg) msg.style.display = "none";
 
   if (tab === "login") {
-    loginForm.style.display = "block";
-    signupForm.style.display = "none";
-    loginTab.style.borderBottomColor = "var(--primary)";
-    loginTab.style.color = "var(--text-main)";
-    signupTab.style.borderBottomColor = "transparent";
-    signupTab.style.color = "var(--text-muted)";
+    if (loginForm) loginForm.style.display = "block";
+    if (signupForm) signupForm.style.display = "none";
+    if (tabLogin) tabLogin.classList.add("active");
+    if (tabSignup) tabSignup.classList.remove("active");
   } else {
-    loginForm.style.display = "none";
-    signupForm.style.display = "block";
-    signupTab.style.borderBottomColor = "var(--primary)";
-    signupTab.style.color = "var(--text-main)";
-    loginTab.style.borderBottomColor = "transparent";
-    loginTab.style.color = "var(--text-muted)";
+    if (loginForm) loginForm.style.display = "none";
+    if (signupForm) signupForm.style.display = "block";
+    if (tabLogin) tabLogin.classList.remove("active");
+    if (tabSignup) tabSignup.classList.add("active");
   }
 };
 
@@ -234,7 +244,6 @@ window.processReturn = (txId) => {
   }
 };
 
-// NEW: Student Return Function
 window.studentReturn = (txId) => {
   if (confirm("Do you want to return this book now?")) {
     const fine = Store.returnBook(txId);
@@ -256,17 +265,26 @@ window.loadEdit = (id) => {
     if (document.getElementById("b_desc"))
       document.getElementById("b_desc").value = book.description || "";
 
-    document.getElementById("formBtn").innerText = "Save";
-    document.getElementById("cancelBtn").style.display = "inline";
+    const btn = document.getElementById("formBtn");
+    if (btn) btn.innerHTML = "<i class='bx bx-save'></i> Save Changes";
+
+    const cancelBtn = document.getElementById("cancelBtn");
+    if (cancelBtn) cancelBtn.style.display = "inline-flex";
+
     window.scrollTo(0, 0);
   }
 };
 
 window.resetForm = () => {
-  document.getElementById("bookForm").reset();
+  const form = document.getElementById("bookForm");
+  if (form) form.reset();
   document.getElementById("b_id").value = "";
-  document.getElementById("formBtn").innerText = "+ Add";
-  document.getElementById("cancelBtn").style.display = "none";
+
+  const btn = document.getElementById("formBtn");
+  if (btn) btn.innerHTML = "<i class='bx bx-plus'></i> Add Book";
+
+  const cancelBtn = document.getElementById("cancelBtn");
+  if (cancelBtn) cancelBtn.style.display = "none";
 };
 
 window.handleLike = (id, type) => {
@@ -286,7 +304,6 @@ window.handleDelete = (id) => {
   }
 };
 
-// NEW: Ban User Function
 window.toggleBan = (username) => {
   if (confirm(`Are you sure you want to change ban status for ${username}?`)) {
     Store.toggleBan(username);
@@ -297,7 +314,8 @@ window.toggleBan = (username) => {
 window.handleLogout = () => Auth.logout();
 
 document.body.addEventListener("click", (e) => {
-  if (e.target.id === "theme-toggle") {
+  // Check if the clicked element or its parent is the theme toggle
+  if (e.target.id === "theme-toggle" || e.target.closest("#theme-toggle")) {
     Store.toggleTheme();
     applyTheme();
   }

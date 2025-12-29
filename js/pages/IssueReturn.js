@@ -22,21 +22,27 @@ export default function IssueReturn() {
 
       return `
             <tr>
-                <td>${tx.bookTitle}</td>
-                <td>${tx.username}</td>
+                <td><strong>${tx.bookTitle}</strong></td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class='bx bx-user-circle'></i> ${tx.username}
+                    </div>
+                </td>
                 <td>${new Date(tx.issueDate).toLocaleDateString()}</td>
                 <td>
                     ${new Date(tx.dueDate).toLocaleDateString()}
                     ${
                       isLate
-                        ? `<br><span style="color:red; font-size:0.8rem;">LATE (${fine} fine)</span>`
+                        ? `<br><span class="badge badge-danger" style="margin-top: 5px;">LATE ($${fine})</span>`
                         : ""
                     }
                 </td>
                 <td>
-                    <button class="btn btn-success" onclick="window.processReturn(${
+                    <button class="btn btn-sm btn-success" onclick="window.processReturn(${
                       tx.id
-                    })">Return Book</button>
+                    })">
+                        <i class='bx bx-check'></i> Return
+                    </button>
                 </td>
             </tr>
         `;
@@ -45,15 +51,18 @@ export default function IssueReturn() {
 
   return `
         <div class="fade-in">
-            <h1>Circulation Desk</h1>
-            <div class="card">
-                <h3>Issued Books</h3>
-                <table>
+            <header class="page-header">
+                <h1 class="page-title">Circulation Desk</h1>
+                <p class="page-subtitle">Manage issued books and returns</p>
+            </header>
+
+            <div class="card table-container">
+                <table class="data-table">
                     <thead><tr><th>Book</th><th>Student</th><th>Issued On</th><th>Return Due</th><th>Action</th></tr></thead>
                     <tbody>${
                       rows.length
                         ? rows
-                        : '<tr><td colspan="5">No active issues.</td></tr>'
+                        : '<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">No active issues.</td></tr>'
                     }</tbody>
                 </table>
             </div>
