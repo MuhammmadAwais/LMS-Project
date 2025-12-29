@@ -4,22 +4,21 @@ import Auth from "./core/Auth.js";
 import Navbar from "./components/Navbar.js";
 
 // Pages
+import Login from "./pages/Login.js";
 import Dashboard from "./pages/Dashboard.js";
 import Books from "./pages/Books.js";
-import IssueReturn from "./pages/IssueReturn.js";
-import Login from "./pages/Login.js";
+import IssueReturn from "./pages/IssueReturn.js"; // Admin
+import Users from "./pages/Users.js"; // Admin
+import StudentInventory from "./pages/StudentInventory.js"; // Student
 
 Store.init();
 
-// --- LAYOUT MANAGEMENT ---
+// --- LAYOUT ---
 const app = document.getElementById("app");
 
 const renderLayout = () => {
-  // If on login page, don't show sidebar
-  const isLogin = window.location.hash === "#login";
-
-  if (isLogin) {
-    app.innerHTML = `<main id="page-content" style="background: var(--bg-body); height: 100vh; overflow-y: auto; padding: 2rem; display: flex; justify-content: center;"></main>`;
+  if (window.location.hash === "#login" || window.location.hash === "") {
+    app.innerHTML = `<main id="page-content" style="background: var(--bg-body); min-height: 100vh; padding: 2rem; display: flex; justify-content: center;"></main>`;
   } else {
     app.innerHTML = `
             <div class="app-container">
@@ -30,152 +29,183 @@ const renderLayout = () => {
   }
 };
 
-// --- ROUTER SETUP ---
+// --- ROUTES ---
 const routes = {
+  login: Login,
   dashboard: Dashboard,
   books: Books,
   issue: IssueReturn,
-  login: Login,
+  users: Users,
+  mybooks: StudentInventory,
 };
 
-// Re-render layout when hash changes (to toggle sidebar on/off for login)
+// Handle route changes
 window.addEventListener("hashchange", renderLayout);
-renderLayout(); // Initial call
+renderLayout();
 
 const router = new Router(routes);
 
-// --- GLOBAL EVENT HANDLERS ---
+// --- GLOBAL HANDLERS ---
 
-// 1. AUTHENTICATION
-document.body.addEventListener("submit", (e) => {
-  if (e.target.id === "loginForm") {
-    e.preventDefault();
-    const user = document.getElementById("login_user").value;
-    const pass = document.getElementById("login_pass").value;
+// 1. AUTH / SIGNUP UI LOGIC
+window.switchAuthTab = (tab) => {
+  const loginForm = document.getElementById("loginForm");
+  const signupForm = document.getElementById("signupForm");
+  const loginTab = document.getElementById("tab-login");
+  const signupTab = document.getElementById("tab-signup");
+  const msg = document.getElementById("signup-msg");
 
-    if (Auth.login(user, pass)) {
-      window.location.hash = "dashboard";
-    } else {
-      document.getElementById("login-error").style.display = "block";
-    }
+  msg.style.display = "none";
+
+  if (tab === "login") {
+    loginForm.style.display = "block";
+    signupForm.style.display = "none";
+    loginTab.style.borderBottomColor = "var(--primary)";
+    loginTab.style.color = "var(--text-main)";
+    signupTab.style.borderBottomColor = "transparent";
+    signupTab.style.color = "var(--text-muted)";
+  } else {
+    loginForm.style.display = "none";
+    signupForm.style.display = "block";
+    signupTab.style.borderBottomColor = "var(--primary)";
+    signupTab.style.color = "var(--text-main)";
+    loginTab.style.borderBottomColor = "transparent";
+    loginTab.style.color = "var(--text-muted)";
   }
-});
-
-window.handleLogout = () => {
-  Auth.logout();
 };
 
-// 2. BOOKS CRUD
-// Handle Add/Update Form
 document.body.addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  // LOGIN
+  if (e.target.id === "loginForm") {
+    const user = document.getElementById("login_user").value;
+    const pass = document.getElementById("login_pass").value;
+    const role = document.querySelector('input[name="role"]:checked').value;
+
+    if (Auth.login(user, pass, role)) {
+      window.location.hash = "dashboard";
+    } else {
+      const msg = document.getElementById("login-msg");
+      msg.innerText = "Invalid credentials or Role!";
+      msg.style.display = "block";
+    }
+  }
+
+  // SIGNUP
+  if (e.target.id === "signupForm") {
+    const user = document.getElementById("sign_user").value;
+    const pass = document.getElementById("sign_pass").value;
+
+    if (Store.signup(user, pass)) {
+      const msg = document.getElementById("signup-msg");
+      msg.innerText = "Account created! Please Login.";
+      msg.style.display = "block";
+      e.target.reset();
+      setTimeout(() => window.switchAuthTab("login"), 1500);
+    } else {
+      alert("Username already exists!");
+    }
+  }
+
+  // ADD BOOK (Admin)
   if (e.target.id === "bookForm") {
-    e.preventDefault();
     const id = document.getElementById("b_id").value;
     const title = document.getElementById("b_title").value;
     const author = document.getElementById("b_author").value;
     const isbn = document.getElementById("b_isbn").value;
 
-    if (id) {
-      // Update Mode
-      Store.updateBook({ id, title, author, isbn });
-    } else {
-      // Add Mode
-      Store.addBook({ title, author, isbn });
-    }
+    if (id) Store.updateBook({ id, title, author, isbn });
+    else Store.addBook({ title, author, isbn });
+
     window.resetForm();
     router.handleRoute();
   }
 });
 
-// Delete Book
+// 2. STUDENT ACTIONS
+window.handleRequest = (bookId) => {
+  const user = Auth.getUser();
+  if (!user) return;
+
+  const result = Store.requestBook(bookId, user.username);
+  if (result === "BANNED") alert("You are banned from borrowing books.");
+  else if (result === "UNAVAILABLE") alert("Book is no longer available.");
+  else {
+    alert("Request sent to Admin!");
+    router.handleRoute();
+  }
+};
+
+window.returnMyBook = (bookId) => {
+  if (confirm("Return this book to library?")) {
+    Store.returnBook(bookId);
+    router.handleRoute();
+  }
+};
+
+// 3. ADMIN ACTIONS
+window.approveRequest = (bookId) => {
+  Store.approveRequest(bookId);
+  router.handleRoute();
+};
+
+window.rejectRequest = (bookId) => {
+  Store.rejectRequest(bookId);
+  router.handleRoute();
+};
+
+window.handleReturn = (bookId) => {
+  if (confirm("Confirm return/revoke of this book?")) {
+    Store.returnBook(bookId);
+    router.handleRoute();
+  }
+};
+
+window.toggleBan = (username) => {
+  if (confirm(`Toggle ban status for ${username}?`)) {
+    Store.toggleBan(username);
+    router.handleRoute();
+  }
+};
+
 window.handleDelete = (id) => {
-  if (confirm("Are you sure?")) {
+  if (confirm("Delete this book?")) {
     Store.deleteBook(id);
     router.handleRoute();
   }
 };
 
-// 3. EDIT BOOK HELPER
-// This function fills the form with existing data
+window.handleLogout = () => Auth.logout();
+
+// Helpers
+window.resetForm = () => {
+  document.getElementById("bookForm").reset();
+  document.getElementById("b_id").value = "";
+  document.getElementById("formTitle").innerText = "Add New Book";
+  document.getElementById("formBtn").innerText = "+ Add";
+  document.getElementById("cancelBtn").style.display = "none";
+};
+
+// Edit Helper
 window.loadEdit = (id) => {
-  const book = Store.getBookById(id);
+  const book = Store.getState().books.find((b) => b.id == id);
   if (book) {
     document.getElementById("b_id").value = book.id;
     document.getElementById("b_title").value = book.title;
     document.getElementById("b_author").value = book.author;
     document.getElementById("b_isbn").value = book.isbn;
-
-    // UI Changes
     document.getElementById("formTitle").innerText = "Edit Book";
-    document.getElementById("formBtn").innerText = "Save Changes";
-    document.getElementById("formBtn").classList.remove("btn-primary");
-    document.getElementById("formBtn").classList.add("btn-success");
+    document.getElementById("formBtn").innerText = "Save";
     document.getElementById("cancelBtn").style.display = "inline-block";
-
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 };
 
-window.resetForm = () => {
-  document.getElementById("bookForm").reset();
-  document.getElementById("b_id").value = "";
-  document.getElementById("formTitle").innerText = "Add New Book";
-  document.getElementById("formBtn").innerText = "+ Add Book";
-  document.getElementById("formBtn").classList.add("btn-primary");
-  document.getElementById("formBtn").classList.remove("btn-success");
-  document.getElementById("cancelBtn").style.display = "none";
-};
-
-// 4. SEARCH FUNCTIONALITY
+// Search
 document.body.addEventListener("input", (e) => {
   if (e.target.id === "searchInput") {
     window.currentSearchTerm = e.target.value;
-    // Re-render just the table part would be better, but re-routing is easier for now
-    // To prevent focus loss, we simple update the innerHTML of the container
-    const books = Store.getBooks(e.target.value);
-
-    // We need to import BookTable here or ensure it's available.
-    // Since app.js imports modules, we can't easily use the imported function inside this scope dynamically
-    // unless we attach it to window or re-trigger route.
-    // Simplest "SPA" way without React:
     router.handleRoute();
-
-    // Restore focus
-    setTimeout(() => {
-      const input = document.getElementById("searchInput");
-      if (input) {
-        input.focus();
-        input.setSelectionRange(input.value.length, input.value.length);
-      }
-    }, 0);
+    setTimeout(() => document.getElementById("searchInput")?.focus(), 0);
   }
 });
-
-// 5. ISSUE / RETURN LOGIC
-window.openIssueModal = (id, title) => {
-  const student = prompt(`Issue "${title}" to whom? (Enter Student Name)`);
-  if (student) {
-    Store.issueBook(id, student);
-    router.handleRoute();
-  }
-};
-
-window.handleReturn = (id) => {
-  if (confirm("Confirm return of this book?")) {
-    Store.returnBook(id);
-    router.handleRoute();
-  }
-};
-
-// 6. THEME
-document.body.addEventListener("click", (e) => {
-  if (e.target.id === "theme-toggle") {
-    const newTheme = Store.toggleTheme();
-    if (newTheme === "dark") document.body.classList.add("dark");
-    else document.body.classList.remove("dark");
-  }
-});
-
-// Apply theme on load
-if (Store.getState().theme === "dark") document.body.classList.add("dark");

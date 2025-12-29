@@ -1,37 +1,41 @@
 import Store from "../core/Store.js";
 
 export default function IssueReturn() {
-  const books = Store.getBooks(); // Get all books
+  const books = Store.getBooks();
 
-  // Split books into two lists
-  const availableBooks = books.filter((b) => b.status === "Available");
-  const issuedBooks = books.filter((b) => b.status === "Issued");
+  // 1. Pending Requests
+  const requestedBooks = books.filter((b) => b.status === "Requested");
 
-  const availableHTML =
-    availableBooks
+  const requestHTML =
+    requestedBooks
       .map(
         (b) => `
-        <div class="card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 1rem;">
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-left: 4px solid orange;">
             <div>
-                <strong>${b.title}</strong> <span style="color: var(--text-muted);">(${b.isbn})</span>
+                <strong>${b.title}</strong> requested by <span style="font-size: 1.1rem; font-weight: bold; color: var(--primary);">${b.requestedBy}</span>
             </div>
-            <button class="btn btn-primary" onclick="window.openIssueModal(${b.id}, '${b.title}')">Issue</button>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-success" onclick="window.approveRequest(${b.id})">Approve</button>
+                <button class="btn btn-danger" onclick="window.rejectRequest(${b.id})">Reject</button>
+            </div>
         </div>
     `
       )
       .join("") ||
-    '<p style="color: var(--text-muted);">No books available.</p>';
+    '<p style="color: var(--text-muted);">No pending requests.</p>';
+
+  // 2. Currently Issued
+  const issuedBooks = books.filter((b) => b.status === "Issued");
 
   const issuedHTML =
     issuedBooks
       .map(
         (b) => `
-         <div class="card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 1rem; border-left: 4px solid var(--danger);">
+         <div class="card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-left: 4px solid var(--danger);">
             <div>
-                <strong>${b.title}</strong>
-                <div style="font-size: 0.9rem; color: var(--text-muted);">Held by: <b>${b.holder}</b></div>
+                <strong>${b.title}</strong> held by <b>${b.holder}</b>
             </div>
-            <button class="btn btn-success" onclick="window.handleReturn(${b.id})">Return</button>
+            <button class="btn btn-outline" onclick="window.handleReturn(${b.id})">Revoke / Return</button>
         </div>
     `
       )
@@ -40,16 +44,14 @@ export default function IssueReturn() {
 
   return `
         <div class="fade-in">
-            <h1 style="margin-bottom: 2rem;">Issue & Return Desk</h1>
-            
+            <h1 style="margin-bottom: 2rem;">Requests & Issues</h1>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem;">
                 <div>
-                    <h3 style="margin-bottom: 1rem; color: var(--success);">Available for Issue</h3>
-                    ${availableHTML}
+                    <h3 style="margin-bottom: 1rem; color: orange;">Pending Requests</h3>
+                    ${requestHTML}
                 </div>
-
                 <div>
-                    <h3 style="margin-bottom: 1rem; color: var(--primary);">Currently Issued</h3>
+                    <h3 style="margin-bottom: 1rem; color: var(--danger);">Active Issues</h3>
                     ${issuedHTML}
                 </div>
             </div>
