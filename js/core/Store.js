@@ -19,10 +19,12 @@ const seeds = {
       reviews: [],
       likes: 0,
       dislikes: 0,
+      likedBy: [], // New: Track users who liked
+      dislikedBy: [], // New: Track users who disliked
     },
   ],
   transactions: [],
-  complaints: [], // { id, user, text, date, status, reply: "" }
+  complaints: [],
   users: [
     { username: "admin", password: "123", role: "admin", isBanned: false },
     { username: "student", password: "123", role: "student", isBanned: false },
@@ -56,7 +58,7 @@ export default class Store {
     this.saveState(state);
   }
 
-  // --- COMPLAINTS & REPLIES (NEW) ---
+  // --- COMPLAINTS & REPLIES ---
   static addComplaint(username, text) {
     const state = this.getState();
     if (!state.complaints) state.complaints = [];
@@ -67,7 +69,7 @@ export default class Store {
       text,
       date: new Date().toISOString(),
       status: "Open",
-      reply: null, // Placeholder for admin reply
+      reply: null,
     });
     this.saveState(state);
   }
@@ -80,6 +82,13 @@ export default class Store {
       complaint.status = "Resolved";
       this.saveState(state);
     }
+  }
+
+  // NEW: Delete Complaint
+  static deleteComplaint(id) {
+    const state = this.getState();
+    state.complaints = state.complaints.filter((c) => c.id != id);
+    this.saveState(state);
   }
 
   static getComplaints() {
@@ -113,6 +122,7 @@ export default class Store {
     if (book) {
       if (!book.reviews) book.reviews = [];
       book.reviews.push({
+        id: Date.now(), // Added ID for deletion
         user: username,
         rating: parseInt(rating),
         comment,
@@ -122,12 +132,50 @@ export default class Store {
     }
   }
 
-  static toggleLike(bookId, type) {
+  // NEW: Delete Review
+  static deleteReview(bookId, reviewId) {
+    const state = this.getState();
+    const book = state.books.find((b) => b.id == bookId);
+    if (book && book.reviews) {
+      book.reviews = book.reviews.filter((r) => r.id != reviewId);
+      this.saveState(state);
+    }
+  }
+
+  // FIXED: Toggle Like/Dislike Logic
+  static toggleLike(bookId, username, type) {
     const state = this.getState();
     const book = state.books.find((b) => b.id == bookId);
     if (book) {
-      if (type === "like") book.likes = (book.likes || 0) + 1;
-      else book.dislikes = (book.dislikes || 0) + 1;
+      if (!book.likedBy) book.likedBy = [];
+      if (!book.dislikedBy) book.dislikedBy = [];
+
+      if (type === "like") {
+        // Remove from dislikes if present
+        book.dislikedBy = book.dislikedBy.filter((u) => u !== username);
+
+        // Toggle Like
+        if (book.likedBy.includes(username)) {
+          book.likedBy = book.likedBy.filter((u) => u !== username); // Unlike
+        } else {
+          book.likedBy.push(username); // Like
+        }
+      } else {
+        // Remove from likes if present
+        book.likedBy = book.likedBy.filter((u) => u !== username);
+
+        // Toggle Dislike
+        if (book.dislikedBy.includes(username)) {
+          book.dislikedBy = book.dislikedBy.filter((u) => u !== username); // Undislike
+        } else {
+          book.dislikedBy.push(username); // Dislike
+        }
+      }
+
+      // Update Counts
+      book.likes = book.likedBy.length;
+      book.dislikes = book.dislikedBy.length;
+
       this.saveState(state);
     }
   }
@@ -140,6 +188,8 @@ export default class Store {
     book.reviews = [];
     book.likes = 0;
     book.dislikes = 0;
+    book.likedBy = [];
+    book.dislikedBy = [];
     state.books.push(book);
     this.saveState(state);
   }
@@ -174,13 +224,11 @@ export default class Store {
     if (!user || user.isBanned) return "BANNED";
     if (!book || book.availableStock < 1) return "OUT_OF_STOCK";
 
-    // Date Validation
     const today = new Date();
     const reqDate = new Date(requestedDateStr);
     const maxDate = new Date();
     maxDate.setDate(today.getDate() + parseInt(settings.maxBorrowDays));
 
-    // If simple manual issue (no date provided), default to max days
     const finalDate = requestedDateStr ? reqDate : maxDate;
 
     book.availableStock--;
@@ -244,7 +292,9 @@ export default class Store {
 
   static signup(username, password) {
     const state = this.getState();
+    // Check if username exists
     if (state.users.find((u) => u.username === username)) return false;
+
     state.users.push({ username, password, role: "student", isBanned: false });
     this.saveState(state);
     return true;

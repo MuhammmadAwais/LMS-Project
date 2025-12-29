@@ -8,24 +8,42 @@ export default function BookDetail() {
 
   const book = Store.getBookById(id);
   if (!book) return `<div class="fade-in"><h1>Book Not Found</h1></div>`;
+  const user = Auth.getUser();
+  const isAdmin = user && user.role === "admin";
 
   const reviews = book.reviews || [];
   const reviewsHtml =
     reviews
-      .map(
-        (r) => `
+      .map((r) => {
+        // Show delete button if Admin OR if it's the user's own review
+        const canDelete = isAdmin || (user && user.username === r.user);
+
+        return `
         <div style="border-bottom:1px solid var(--border); padding: 0.5rem 0;">
-            <div style="display:flex; justify-content:space-between;">
-                <strong>${r.user}</strong>
-                <span style="color:orange;">${"★".repeat(r.rating)}</span>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <strong>${r.user}</strong>
+                    <span style="color:orange; margin-left: 5px;">${"★".repeat(
+                      r.rating
+                    )}</span>
+                </div>
+                ${
+                  canDelete
+                    ? `<button onclick="window.deleteReview(${book.id}, ${r.id})" style="color:red; background:none; border:none; cursor:pointer;">🗑 Delete</button>`
+                    : ""
+                }
             </div>
-            <p style="color:var(--text-muted); font-size:0.9rem;">${
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:5px;">${
               r.comment
             }</p>
         </div>
-    `
-      )
+        `;
+      })
       .join("") || "<p>No reviews yet.</p>";
+
+  // Check if user has liked/disliked
+  const liked = book.likedBy && book.likedBy.includes(user.username);
+  const disliked = book.dislikedBy && book.dislikedBy.includes(user.username);
 
   return `
         <div class="fade-in">
@@ -68,15 +86,19 @@ export default function BookDetail() {
                 }</p>
 
                 <div style="display:flex; gap:10px; margin-bottom:2rem; flex-wrap:wrap;">
-                    <button class="btn btn-outline" onclick="window.handleLike(${
-                      book.id
-                    }, 'like')">👍 Like (${book.likes || 0})</button>
-                    <button class="btn btn-outline" onclick="window.handleLike(${
-                      book.id
-                    }, 'dislike')">👎 Dislike (${book.dislikes || 0})</button>
+                    <button class="btn ${
+                      liked ? "btn-primary" : "btn-outline"
+                    }" onclick="window.handleLike(${book.id}, 'like')">
+                        👍 Like (${book.likes || 0})
+                    </button>
+                    <button class="btn ${
+                      disliked ? "btn-primary" : "btn-outline"
+                    }" onclick="window.handleLike(${book.id}, 'dislike')">
+                        👎 Dislike (${book.dislikes || 0})
+                    </button>
                     ${
                       book.availableStock > 0
-                        ? `<button class="btn btn-primary" onclick="window.initIssue(${book.id})">Request to Borrow</button>`
+                        ? `<button class="btn btn-success" onclick="window.initIssue(${book.id})">Request to Borrow</button>`
                         : ""
                     }
                 </div>

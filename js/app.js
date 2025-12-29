@@ -3,22 +3,20 @@ import Router from "./core/Router.js";
 import Auth from "./core/Auth.js";
 import Navbar from "./components/Navbar.js";
 
-// Page Imports
 import Login from "./pages/Login.js";
 import Dashboard from "./pages/Dashboard.js";
 import Books from "./pages/Books.js";
 import IssueReturn from "./pages/IssueReturn.js";
 import Users from "./pages/Users.js";
 import StudentInventory from "./pages/StudentInventory.js";
-import BookDetail from "./pages/BookDetail.js"; // Was missing
-import Settings from "./pages/Settings.js"; // Was missing
-import Complaints from "./pages/Complaints.js"; // Was missing
+import BookDetail from "./pages/BookDetail.js";
+import Settings from "./pages/Settings.js";
+import Complaints from "./pages/Complaints.js";
 
 Store.init();
 
 const app = document.getElementById("app");
 
-// Fix Theme Logic
 const applyTheme = () => {
   const theme = Store.getState().theme || "light";
   if (theme === "dark") document.body.classList.add("dark");
@@ -36,7 +34,7 @@ const renderLayout = () => {
             </div>
         `;
   }
-  applyTheme(); // Ensure theme is applied on render
+  applyTheme();
 };
 
 const routes = {
@@ -57,17 +55,16 @@ const router = new Router(routes);
 
 // --- GLOBAL EVENT LISTENERS ---
 
-// 1. Navigation Helper
 window.viewBook = (id) => {
   window.currentBookId = id;
   window.location.hash = "book-detail";
 };
 
-// 2. FILTERS & SEARCH
 window.handleCategory = (val) => {
   window.currentCategory = val;
   router.handleRoute();
 };
+
 document.body.addEventListener("input", (e) => {
   if (e.target.id === "searchInput") {
     window.currentSearchTerm = e.target.value;
@@ -76,7 +73,6 @@ document.body.addEventListener("input", (e) => {
   }
 });
 
-// 3. FORM SUBMISSIONS (Login, Books, Settings, Reviews, Complaints)
 document.body.addEventListener("submit", (e) => {
   // Login
   if (e.target.id === "loginForm") {
@@ -88,7 +84,27 @@ document.body.addEventListener("submit", (e) => {
     else alert("Invalid Login");
   }
 
-  // Book Form (Add/Edit)
+  // Signup (Fixed)
+  if (e.target.id === "signupForm") {
+    e.preventDefault();
+    const user = document.getElementById("sign_user").value;
+    const pass = document.getElementById("sign_pass").value;
+
+    if (Store.signup(user, pass)) {
+      const msg = document.getElementById("signup-msg");
+      if (msg) {
+        msg.innerText = "Account created! Please Login.";
+        msg.style.display = "block";
+      }
+      e.target.reset();
+      alert("Account Created Successfully! Switching to Login...");
+      // Delay switch to let user read message
+      setTimeout(() => window.switchAuthTab("login"), 1000);
+    } else {
+      alert("Username already exists!");
+    }
+  }
+
   if (e.target.id === "bookForm") {
     e.preventDefault();
     const data = {
@@ -108,7 +124,6 @@ document.body.addEventListener("submit", (e) => {
     router.handleRoute();
   }
 
-  // Settings Form
   if (e.target.id === "settingsForm") {
     e.preventDefault();
     const fine = document.getElementById("s_fine").value;
@@ -117,7 +132,6 @@ document.body.addEventListener("submit", (e) => {
     alert("Settings Saved!");
   }
 
-  // Complaint Form
   if (e.target.id === "complaintForm") {
     e.preventDefault();
     const text = document.getElementById("c_text").value;
@@ -128,7 +142,6 @@ document.body.addEventListener("submit", (e) => {
     router.handleRoute();
   }
 
-  // Review Form
   if (e.target.id === "reviewForm") {
     e.preventDefault();
     const rating = document.getElementById("r_rating").value;
@@ -141,12 +154,36 @@ document.body.addEventListener("submit", (e) => {
   }
 });
 
-// 4. ISSUE / RETURN / REPLY LOGIC
+// Auth Switcher
+window.switchAuthTab = (tab) => {
+  const loginForm = document.getElementById("loginForm");
+  const signupForm = document.getElementById("signupForm");
+  const loginTab = document.getElementById("tab-login");
+  const signupTab = document.getElementById("tab-signup");
+  const msg = document.getElementById("signup-msg");
+
+  if (msg) msg.style.display = "none";
+
+  if (tab === "login") {
+    loginForm.style.display = "block";
+    signupForm.style.display = "none";
+    loginTab.style.borderBottomColor = "var(--primary)";
+    loginTab.style.color = "var(--text-main)";
+    signupTab.style.borderBottomColor = "transparent";
+    signupTab.style.color = "var(--text-muted)";
+  } else {
+    loginForm.style.display = "none";
+    signupForm.style.display = "block";
+    signupTab.style.borderBottomColor = "var(--primary)";
+    signupTab.style.color = "var(--text-main)";
+    loginTab.style.borderBottomColor = "transparent";
+    loginTab.style.color = "var(--text-muted)";
+  }
+};
+
 window.initIssue = (bookId) => {
   const settings = Store.getSettings();
   const user = Auth.getUser();
-
-  // Calculate max date
   const maxDate = new Date();
   maxDate.setDate(maxDate.getDate() + parseInt(settings.maxBorrowDays));
   const maxDateStr = maxDate.toISOString().split("T")[0];
@@ -175,6 +212,20 @@ window.openReply = (id) => {
   }
 };
 
+window.handleDeleteComplaint = (id) => {
+  if (confirm("Are you sure you want to delete this complaint?")) {
+    Store.deleteComplaint(id);
+    router.handleRoute();
+  }
+};
+
+window.deleteReview = (bookId, reviewId) => {
+  if (confirm("Delete this review?")) {
+    Store.deleteReview(bookId, reviewId);
+    router.handleRoute();
+  }
+};
+
 window.processReturn = (txId) => {
   if (confirm("Process return for this book?")) {
     const fine = Store.returnBook(txId);
@@ -184,7 +235,6 @@ window.processReturn = (txId) => {
   }
 };
 
-// 5. HELPER: LOAD EDIT FORM
 window.loadEdit = (id) => {
   const book = Store.getBookById(id);
   if (book) {
@@ -211,8 +261,13 @@ window.resetForm = () => {
 };
 
 window.handleLike = (id, type) => {
-  Store.toggleLike(id, type);
-  router.handleRoute();
+  const user = Auth.getUser();
+  if (user) {
+    Store.toggleLike(id, user.username, type);
+    router.handleRoute();
+  } else {
+    alert("Please login to like/dislike.");
+  }
 };
 
 window.handleDelete = (id) => {
@@ -224,7 +279,6 @@ window.handleDelete = (id) => {
 
 window.handleLogout = () => Auth.logout();
 
-// Theme Toggle
 document.body.addEventListener("click", (e) => {
   if (e.target.id === "theme-toggle") {
     Store.toggleTheme();

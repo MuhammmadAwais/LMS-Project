@@ -24,11 +24,16 @@ export default function Complaints() {
                 </td>
                 <td>${new Date(c.date).toLocaleDateString()}</td>
                 <td>
-                    ${
-                      c.status === "Resolved"
-                        ? '<span style="color:green;">✔ Resolved</span>'
-                        : `<button class="btn btn-primary" onclick="window.openReply(${c.id})">Reply</button>`
-                    }
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        ${
+                          c.status === "Resolved"
+                            ? '<span style="color:green;">✔</span>'
+                            : `<button class="btn btn-primary" onclick="window.openReply(${c.id})" style="padding: 2px 8px; font-size:0.8rem;">Reply</button>`
+                        }
+                        <button onclick="window.handleDeleteComplaint(${
+                          c.id
+                        })" style="color:red; background:none; border:none; cursor:pointer;">🗑</button>
+                    </div>
                 </td>
             </tr>
         `
@@ -57,9 +62,14 @@ export default function Complaints() {
             <div class="card" style="margin-bottom:1rem;">
                 <div style="display:flex; justify-content:space-between;">
                     <strong>${new Date(c.date).toLocaleDateString()}</strong>
-                    <span style="color:${
-                      c.status === "Resolved" ? "green" : "orange"
-                    }">${c.status}</span>
+                    <div style="display:flex; gap:10px;">
+                        <span style="color:${
+                          c.status === "Resolved" ? "green" : "orange"
+                        }">${c.status}</span>
+                        <button onclick="window.handleDeleteComplaint(${
+                          c.id
+                        })" style="color:red; background:none; border:none; cursor:pointer;">🗑 Delete</button>
+                    </div>
                 </div>
                 <p style="margin-top:0.5rem;">${c.text}</p>
                 ${
